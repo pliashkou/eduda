@@ -88,7 +88,7 @@ class MyCharacteristicCallbacks : public BLECharacteristicCallbacks {
 String readState() {
   const int LEVEL = 50;
   
-  return String(touchRead(T0) < LEVEL ? '1': '0') + /* String(touchRead(T1) < LEVEL ? '1': '0') + String(touchRead(T2) < LEVEL ? '1': '0') + */
+  return String(touchRead(T0) < LEVEL ? '1': '0') + /* String(touchRead(T1) < LEVEL ? '1': '0') + */ String(touchRead(T2) < LEVEL ? '1': '0') +
     String(touchRead(T3) < LEVEL ? '1': '0') + String(touchRead(T4) < LEVEL ? '1': '0') + String(touchRead(T5) < LEVEL ? '1': '0' ) +
     String(touchRead(T6) < LEVEL ? '1': '0') +String(touchRead(T7) < LEVEL ? '1': '0') +String(touchRead(T8) < LEVEL ? '1': '0') +
     String(touchRead(T9) < LEVEL ? '1': '0') ;
@@ -99,7 +99,7 @@ void setup() {
   pinMode(ledPin, OUTPUT);
 
   // Create the BLE Device
-  BLEDevice::init("duda-piatro");
+  BLEDevice::init("eDuda");
 
   // Create the BLE Server
   pServer = BLEDevice::createServer();

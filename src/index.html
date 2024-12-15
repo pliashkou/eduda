@@ -50,7 +50,7 @@
     const bleStateContainer = document.getElementById('bleState');
     
     //Define BLE Device Specs
-    var deviceName ='duda';
+    var deviceName ='eDuda';
     var bleService = '19b10000-e8f2-537e-4f6c-d104768a1214';
     var ledCharacteristic = '19b10002-e8f2-537e-4f6c-d104768a1214';
     var sensorCharacteristic= '19b10001-e8f2-537e-4f6c-d104768a1214';
@@ -154,13 +154,19 @@
         const NOTES = [`F#${OCTAVE+1}`, `E${OCTAVE+1}`, `D${OCTAVE+1}`,`C#${OCTAVE+1}`, `B${OCTAVE}`, `A${OCTAVE}`, `G${OCTAVE}`, `F#${OCTAVE}`, `E${OCTAVE}`];
         // const NOTES = [`A${OCTAV/E+1}`, `G${OCTAVE+1}`, `F${OCTAVE+1}`,`E${OCTAVE+1}`, `D${OCTAVE+1}`, `C${OCTAVE+1}`, `B${OCTAVE}`, `A${OCTAVE}`, `G${OCTAVE}`];
 
-        if (newValueReceived == '00000000') {
+        if (newValueReceived[0] === '0') {
             synth.triggerRelease();
+            isEnabled = false;
             return;
+        } else {
+            isEnabled = true;
         }
 
-        if (newValueReceived == '11111111') {
-            isEnabled = true;
+        if (newValueReceived === '000000000') {
+            return;
+        } 
+
+        if (newValueReceived === '111111111') {
             synth.triggerAttack(NOTES[NOTES.length-1], now);
             return;
         }
@@ -169,9 +175,9 @@
             return; 
         }
 
-        for (let i = 0; i < NOTES.length - 1; i++) {
-            if (newValueReceived[i] == IS_OPEN) {
-                synth.triggerAttack(NOTES[i], now);
+        for (let i = 1; i < NOTES.length; i++) {
+            if (newValueReceived[i] == 0) {
+                synth.triggerAttack(NOTES[i-1], now);
                 break;
             }
         }
