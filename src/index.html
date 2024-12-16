@@ -30,6 +30,13 @@
                         style="font-size: 32px; color: green; font-weight: bold;"></span></p>
             </div>
 
+            <div class="card">
+                <h2>STROI</h2>
+                <input type="text" value="" id="stroi" style="width: 300px;" onblur="handleStroiChange()"/>
+                <p><a href="" onclick="setStroi(`F4,E4,D4,C4,B3,A3,G3,E3,E3`); return false;">F4,E4,D4,C4,B3,A3,G3,E3,E3</a></p>
+                <p><a href="" onclick="setStroi(`F#4,E4,D4,C#4,B3,A3,G3,E3,E3`); return false;">F#4,E4,D4,C#4,B3,A3,G3,E3,E3</a></p>
+            </div>
+
             <!-- <div class="card">
           <h2>Control</h2>
           <button id="onButton" class="onButton">ON</button>
@@ -50,6 +57,16 @@
     const retrievedValue = document.getElementById("valueContainer");
     const latestValueSent = document.getElementById("valueSent");
     const bleStateContainer = document.getElementById("bleState");
+    const stroiEl = document.getElementById("stroi");
+
+    var NOTES = [];
+
+    var stroi = localStorage.getItem('stroi');
+    if (!stroi) {
+        setStroi(`F#4,E4,D4,C#4,B3,A3,G3,E3,E3`);
+    } else {
+        setStroi(stroi);
+    }
 
     //Define BLE Device Specs
     var deviceName = 'eDuda';
@@ -111,6 +128,16 @@
         }
         console.log("Web Bluetooth API supported in this browser.");
         return true;
+    }
+
+    function handleStroiChange() {
+        console.log(this.event.target.value)
+    }
+
+    function setStroi(value) {
+        NOTES = value.split(',').map(val => val.trim())
+        localStorage.setItem('stroi', value);
+        stroiEl.value = value;
     }
 
     // Connect to BLE Device and Enable Notifications
@@ -178,17 +205,6 @@
 
         const OCTAVE = 3;
         const DRONE_NOTE = `A${OCTAVE - 1}`;
-        const NOTES = [
-            `F#${OCTAVE + 1}`,
-            `E${OCTAVE + 1}`,
-            `D${OCTAVE + 1}`,
-            `C${OCTAVE + 1}`,
-            `B${OCTAVE}`,
-            `A${OCTAVE}`,
-            `G${OCTAVE}`,
-            `E${OCTAVE}`,
-            `E${OCTAVE}`,
-        ];
 
         let noteToPlay = NOTES[0];
 
