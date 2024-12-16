@@ -4,8 +4,6 @@
 <head>
     <title>ESP32 Web BLE App</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" type="image/png" href="favicon.ico">
-    <link rel="stylesheet" type="text/css" href="style.css">
     <meta charset="UTF-8">
     <script src="http://unpkg.com/tone"></script>
 </head>
@@ -26,7 +24,7 @@
         <div class="card-grid">   
             <div class="card">
                 <h2>Buttons Value</h2>
-                <p class="reading"><span id="valueContainer">NaN</span></p>
+                <p class="reading"><span id="valueContainer"></span></p>
             </div>
 
             <div class="card">
@@ -52,7 +50,6 @@
     //Define BLE Device Specs
     var deviceName ='eDuda';
     var bleService = '19b10000-e8f2-537e-4f6c-d104768a1214';
-    var ledCharacteristic = '19b10002-e8f2-537e-4f6c-d104768a1214';
     var sensorCharacteristic= '19b10001-e8f2-537e-4f6c-d104768a1214';
 
     //Global Variables to Handle Bluetooth
@@ -74,8 +71,8 @@
     disconnectButton.addEventListener('click', disconnectDevice);
 
     // Write to the ESP32 LED Characteristic
-    onButton.addEventListener('click', () => writeOnCharacteristic(1));
-    offButton.addEventListener('click', () => writeOnCharacteristic(0));
+    // onButton.addEventListener('click', () => writeOnCharacteristic(1));
+    // offButton.addEventListener('click', () => writeOnCharacteristic(0));
 
     // Check if BLE is available in your Browser
     function isWebBluetoothEnabled() {
@@ -102,7 +99,7 @@
             console.log('Device Selected:', device.name);
             bleStateContainer.innerHTML = 'Connected to device ' + device.name;
             bleStateContainer.style.color = "#24af37";
-            device.addEventListener('gattservicedisconnected', onDisconnected);
+            // device.addEventListener('gattservicedisconnected', onDisconnected);
             return device.gatt.connect();
         })
         .then(gattServer =>{
@@ -149,24 +146,20 @@
 
         const now = Tone.now();
 
-        const IS_OPEN = 0;
         const OCTAVE = 3;
-        const NOTES = [`F#${OCTAVE+1}`, `E${OCTAVE+1}`, `D${OCTAVE+1}`,`C#${OCTAVE+1}`, `B${OCTAVE}`, `A${OCTAVE}`, `G${OCTAVE}`, `F#${OCTAVE}`, `E${OCTAVE}`];
-        // const NOTES = [`A${OCTAV/E+1}`, `G${OCTAVE+1}`, `F${OCTAVE+1}`,`E${OCTAVE+1}`, `D${OCTAVE+1}`, `C${OCTAVE+1}`, `B${OCTAVE}`, `A${OCTAVE}`, `G${OCTAVE}`];
+        // const NOTES = [`F#${OCTAVE+1}`, `E${OCTAVE+1}`, `D${OCTAVE+1}`,`C#${OCTAVE+1}`, `B${OCTAVE}`, `A${OCTAVE}`, `G${OCTAVE}`, `F#${OCTAVE}`, `E${OCTAVE}`];
+        const NOTES = [`A${OCTAVE+1}`, `G${OCTAVE+1}`, `F${OCTAVE+1}`,`E${OCTAVE+1}`, `D${OCTAVE+1}`, `C#${OCTAVE+1}`, `B${OCTAVE}`, `A${OCTAVE}`, `G${OCTAVE}`];
 
         if (newValueReceived[0] === '0') {
             synth.triggerRelease();
             isEnabled = false;
             return;
-        } else {
+        } else { 
             isEnabled = true;
         }
 
-        if (newValueReceived === '000000000') {
-            return;
-        } 
-
         if (newValueReceived === '111111111') {
+            // synth.triggerRelease();
             synth.triggerAttack(NOTES[NOTES.length-1], now);
             return;
         }
@@ -177,6 +170,7 @@
 
         for (let i = 1; i < NOTES.length; i++) {
             if (newValueReceived[i] == 0) {
+                retrievedValue.innerHTML = retrievedValue.innerHTML + ' ' + NOTES[i-1]
                 synth.triggerAttack(NOTES[i-1], now);
                 break;
             }
@@ -184,24 +178,24 @@
     }
 
     function writeOnCharacteristic(value){
-        if (bleServer && bleServer.connected) {
-            bleServiceFound.getCharacteristic(ledCharacteristic)
-            .then(characteristic => {
-                console.log("Found the LED characteristic: ", characteristic.uuid);
-                const data = new Uint8Array([value]);
-                return characteristic.writeValue(data);
-            })
-            .then(() => {
-                latestValueSent.innerHTML = value;
-                console.log("Value written to LEDcharacteristic:", value);
-            })
-            .catch(error => {
-                console.error("Error writing to the LED characteristic: ", error);
-            });
-        } else {
-            console.error ("Bluetooth is not connected. Cannot write to characteristic.")
-            window.alert("Bluetooth is not connected. Cannot write to characteristic. \n Connect to BLE first!")
-        }
+        // if (bleServer && bleServer.connected) {
+        //     bleServiceFound.getCharacteristic(ledCharacteristic)
+        //     .then(characteristic => {
+        //         console.log("Found the LED characteristic: ", characteristic.uuid);
+        //         const data = new Uint8Array([value]);
+        //         return characteristic.writeValue(data);
+        //     })
+        //     .then(() => {
+        //         latestValueSent.innerHTML = value;
+        //         console.log("Value written to LEDcharacteristic:", value);
+        //     })
+        //     .catch(error => {
+        //         console.error("Error writing to the LED characteristic: ", error);
+        //     });
+        // } else {
+        //     console.error ("Bluetooth is not connected. Cannot write to characteristic.")
+        //     window.alert("Bluetooth is not connected. Cannot write to characteristic. \n Connect to BLE first!")
+        // }
     }
 
     function disconnectDevice() {
