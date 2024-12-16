@@ -172,7 +172,7 @@
 
       const now = Tone.now();
       let IS_DRONE_PLAYING = false;
-      const IS_OPEN = 0;
+
       const OCTAVE = 3;
       const DRONE_NOTE = `A${OCTAVE - 1}`;
       const NOTES = [
@@ -187,7 +187,10 @@
         `E${OCTAVE}`,
       ];
 
-      if (newValueReceived == "000000000") {
+      if (newValueReceived == "111111111") { // turn device ON
+        isEnabled = true;
+      } else if (newValueReceived == "000000000" || (isEnabled && newValueReceived[0] == '0')) { // turn device OFF
+        isEnabled = false;
         synth.releaseAll();
         droneSynth.releaseAll();
         IS_DRONE_PLAYING = false;
@@ -195,10 +198,6 @@
       }
 
       synth.releaseAll();
-
-      if (newValueReceived == "101111111") {
-        isEnabled = !isEnabled;
-      }
 
       if (!isEnabled) {
         return;
@@ -210,34 +209,16 @@
         droneSynth.triggerAttack(DRONE_NOTE, now);
         IS_DRONE_PLAYING = true;
       }
-
      
+      for (let i = 0; i < NOTES.length; i++) {
 
-      for (let i = 0; i < NOTES.length - 1; i++) {
-        if (newValueReceived[i] == IS_OPEN) {
-          synth.triggerRelease(NOTES.at(-1), now);
+        if (newValueReceived == '111111111') {
+            synth.triggerAttack(NOTES[NOTES.length-1], now);
+            console.log(NOTES[NOTES.length-1]);
+            break
+        } else if (newValueReceived[i+1] == '0') { // skip functional pin
           synth.triggerAttack(NOTES[i], now);
           console.log(NOTES[i]);
-          break;
-        }
-      }
-
-      if (newValueReceived === "000000000") {
-        return;
-      }
-
-      if (newValueReceived === "101111111") {
-        synth.triggerAttack(NOTES.at(-1), now);
-        return;
-      }
-
-      if (!isEnabled) {
-        return;
-      }
-
-      for (let i = 1; i < NOTES.length; i++) {
-        if (newValueReceived[i] == 0) {
-          synth.triggerAttack(NOTES[i - 1], now);
           break;
         }
       }
@@ -265,7 +246,8 @@
     }
 
     function disconnectDevice() {
-      synth?.triggerRelease();
+        synth.releaseAll();
+        droneSynth.releaseAll();
       isEnabled = false;
 
       console.log("Disconnect Device.");
