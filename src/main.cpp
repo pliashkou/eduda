@@ -74,13 +74,13 @@ void loop() {
 
       // Closed manner playing
       int fingersUpCount = 0;
-      if (newState[0] == oldState[0]) { // functional pin is not changed
+      if (newState[0] == oldState[0] && newState != "0000000000") { // functional pin is not changed
         for (int i = 1; i < newState.length(); i++) {
           if (newState[i] == '0') {
             fingersUpCount++;
           }
 
-          if (fingersUpCount > 1) {
+          if (fingersUpCount > 3) { // allow 3 open pins
             oldState = newState;
             return;
           }
