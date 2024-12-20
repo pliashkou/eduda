@@ -177,7 +177,6 @@
                 );
                 characteristic.startNotifications();
                 console.log("Notifications Started.");
-                writeControlCharacteristic(1);
             })
             .catch((error) => {
                 console.log("Error: ", error);
@@ -195,10 +194,11 @@
 
     function writeControlCharacteristic(value){
         if (bleServer && bleServer.connected) {
+
             bleServiceFound.getCharacteristic(controlCharacteristic)
             .then(characteristic => {
                 console.log("Found the Control characteristic: ", characteristic.uuid);
-                const data = new Uint8Array([value]);
+                const data = Uint8Array.from(Array.from(value).map(letter => letter.charCodeAt(0)));
                 return characteristic.writeValue(data);
             })
             .then(() => {
@@ -267,6 +267,9 @@
         }
         synth.triggerAttack(noteToPlay, now);
         currentNote = noteToPlay;
+
+        writeControlCharacteristic(newValueReceived);
+
     }
 
     function disconnectDevice() {
