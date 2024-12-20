@@ -133,7 +133,7 @@
     }
 
     function handleStroiChange() {
-        console.log(this.event.target.value)
+        setStroi(this.event.target.value);
     }
 
     function setStroi(value) {
@@ -197,19 +197,17 @@
 
             bleServiceFound.getCharacteristic(controlCharacteristic)
             .then(characteristic => {
-                console.log("Found the Control characteristic: ", characteristic.uuid);
                 const data = Uint8Array.from(Array.from(value).map(letter => letter.charCodeAt(0)));
                 return characteristic.writeValue(data);
             })
             .then(() => {
-                console.log("Value written to Control characteristic:", value);
+                // done
             })
             .catch(error => {
                 console.error("Error writing to the Control characteristic ", error);
             });
         } else {
             console.error ("Bluetooth is not connected. Cannot write to characteristic.")
-            window.alert("Bluetooth is not connected. Cannot write to characteristic. \n Connect to BLE first!")
         }
     }
 
@@ -300,7 +298,6 @@
         } else {
             // Throw an error if Bluetooth is not connected
             console.error("Bluetooth is not connected.");
-            window.alert("Bluetooth is not connected.");
         }
     }
 </script>

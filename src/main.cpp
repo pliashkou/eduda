@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include "NimBLEDevice.h"
 
-#define VERSION "1.0"
-// define DEBUG 1
+#define VERSION "1.1"
+#define DEBUG 0
 
 #define SERVICE_UUID        "19b10000-e8f2-537e-4f6c-d104768a1214"
 #define SENSOR_CHARACTERISTIC_UUID "19b10001-e8f2-537e-4f6c-d104768a1214"
@@ -10,9 +10,14 @@
 
 bool deviceConnected = false;
 bool oldDeviceConnected = false;
-String oldState;
+String oldState; // if remove this line - bluetoth will brake :/
 uint8_t mac;
 // long startEventTime;
+
+int oldValues[9]  = {0};
+int beforeState[9] = {0};
+int newState[9] = {0};
+int sensors[9] = {T0, T2, T3, T4, T5, T6, T7, T8, T9};
 
 NimBLEServer* pServer = NULL;
 NimBLECharacteristic* txCharacteristic = NULL;
@@ -39,24 +44,30 @@ class CharacteristicCallbacks : public NimBLECharacteristicCallbacks {
       //   Serial.printf("Delay: %ums \n", resultTime);
       // #endif
 
-      Serial.print("Received: ");
-      Serial.println(val.c_str()); // Print the value
+      #if DEBUG
+        Serial.print("Received: ");
+        Serial.println(val.c_str()); // Print the value
+      #endif
     }
 } chrCallbacks;
 
-String readState() {
-  const int LEVEL = 40;
-  
-  return 
-    String(touchRead(T0) < LEVEL ? '1': '0') +
-    String(touchRead(T2) < LEVEL ? '1': '0') +
-    String(touchRead(T3) < LEVEL ? '1': '0') + 
-    String(touchRead(T4) < LEVEL ? '1': '0') + 
-    String(touchRead(T5) < LEVEL ? '1': '0') +
-    String(touchRead(T6) < LEVEL ? '1': '0') +
-    String(touchRead(T7) < LEVEL ? '1': '0') +
-    String(touchRead(T8) < LEVEL ? '1': '0') +
-    String(touchRead(T9) < LEVEL ? '1': '0') ;
+void updateState() {
+  int LEVEL = 10;
+
+  for (int i = 0; i < 9; i++) {
+    int newValue = touchRead(sensors[i]);
+    int diff = oldValues[i] - newValue;
+
+    if (diff < -LEVEL) { // button is released
+        newState[i] = 0;  // Assume 0 means released
+    } else if (diff > LEVEL) { // button is pushed
+        newState[i] = 1;  // Assume 1 means pressed
+    } else {
+        newState[i] = beforeState[i];  // Maintain previous state if there's no significant change
+    }
+
+    oldValues[i] = newValue; // Update oldValues for next comparison
+  }
 }
 
 void setup()  
@@ -90,31 +101,27 @@ void setup()
 
 void loop() {
   if (deviceConnected) {
-    // startEventTime = micros();
-    String newState = readState();
+    // startEventTime = millis();
+    updateState();
+    bool shouldSendNewState = false;
+    String result = "";
 
-    if (oldState != newState) {
-
-      // Closed manner playing
-      int fingersUpCount = 0;
-      if (newState[0] == oldState[0] && newState != "0000000000") { // functional pin is not changed
-        for (int i = 1; i < newState.length(); i++) {
-          if (newState[i] == '0') {
-            fingersUpCount++;
-          }
-
-          if (fingersUpCount > 3) { // allow 3 open pins
-            oldState = newState;
-            return;
-          }
+    // Update oldState with the new state
+    for (int i = 0; i < 9; i++) {
+        if (beforeState[i] != newState[i]) {
+            shouldSendNewState = true;
         }
-      }
-      oldState = newState;
+        beforeState[i] = newState[i];
+        result+= newState[i];
+    }
+    if (shouldSendNewState) {
+      txCharacteristic->setValue(result);
+      txCharacteristic->notify(); 
 
-      Serial.print("Sent: ");
-      Serial.println(newState);
-      txCharacteristic->setValue(newState);
-      txCharacteristic->notify();  
+      #if DEBUG
+        Serial.print("Sent: ");
+        Serial.println(result);
+      #endif;
     }
   }
 
