@@ -2,24 +2,24 @@
 <html>
 
 <head>
-    <title>ESP32 Web BLE App</title>
+    <title>eDuda</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta charset="UTF-8">
-    <script src="http://unpkg.com/tone"></script>
+    <script src="https://unpkg.com/tone@15.0.4/build/Tone.js"></script>
 </head>
 
 <body>
     <div class="topnav">
-        <h1>ESP32 Web BLE Application</h1>
+        <h1>eDuda</h1>
     </div>
     <div class="content">
         <div class="card-grid">
             <div class="card">
                 <p>
-                    <button id="connectBleButton" class="connectButton"> Connect to BLE Device</button>
-                    <button id="disconnectBleButton" class="disconnectButton"> Disconnect BLE Device</button>
+                    <button id="connectBleButton" class="connectButton"> Connect</button>
+                    <button id="disconnectBleButton" class="disconnectButton"> Disconnect</button>
                 </p>
-                <p class="gray-label">BLE state: <strong><span id="bleState"
+                <p class="gray-label">eDuda state: <strong><span id="bleState"
                             style="color:#d13a30;">Disconnected</span></strong></p>
             </div>
         </div>
@@ -72,6 +72,7 @@
     var deviceName = 'eDuda';
     var bleService = '19b10000-e8f2-537e-4f6c-d104768a1214';
     var sensorCharacteristic = '19b10001-e8f2-537e-4f6c-d104768a1214';
+    var controlCharacteristic = '19b10002-e8f2-537e-4f6c-d104768a1214';
 
     //Global Variables to Handle Bluetooth
     var bleServer;
@@ -80,6 +81,7 @@
 
     var synth;
     var isSoundEnabled = false;
+    var currentNote = null;
     var synth = new Tone.Sampler({
         urls: {
             A2: "../samples/A2.mp3",
@@ -175,20 +177,15 @@
                 );
                 characteristic.startNotifications();
                 console.log("Notifications Started.");
-                //   return characteristic.readValue();
+                writeControlCharacteristic(1);
             })
-            // .then((value) => {
-            //   console.log("Read value: ", value);
-            //   const decodedValue = new TextDecoder().decode(value);
-            //   console.log("Decoded value: ", decodedValue);
-            //   retrievedValue.innerHTML = decodedValue;
-            // })
             .catch((error) => {
                 console.log("Error: ", error);
             });
     }
 
     function onDisconnected(event) {
+        writeControlCharacteristic(0);
         console.log("Device Disconnected:", event.target.device.name);
         bleStateContainer.innerHTML = "Device disconnected";
         bleStateContainer.style.color = "#d13a30";
@@ -196,9 +193,29 @@
         connectToDevice();
     }
 
+    function writeControlCharacteristic(value){
+        if (bleServer && bleServer.connected) {
+            bleServiceFound.getCharacteristic(controlCharacteristic)
+            .then(characteristic => {
+                console.log("Found the Control characteristic: ", characteristic.uuid);
+                const data = new Uint8Array([value]);
+                return characteristic.writeValue(data);
+            })
+            .then(() => {
+                console.log("Value written to Control characteristic:", value);
+            })
+            .catch(error => {
+                console.error("Error writing to the Control characteristic ", error);
+            });
+        } else {
+            console.error ("Bluetooth is not connected. Cannot write to characteristic.")
+            window.alert("Bluetooth is not connected. Cannot write to characteristic. \n Connect to BLE first!")
+        }
+    }
+
     function handleCharacteristicChange(event) {
         const newValueReceived = new TextDecoder().decode(event.target.value);
-        console.log("Characteristic value changed: ", newValueReceived);
+        // console.log("Characteristic value changed: ", newValueReceived);
 
         const now = Tone.now();
         let IS_DRONE_PLAYING = false;
@@ -221,7 +238,7 @@
         }
 
         retrievedValue.innerHTML = noteToPlay;
-        console.log(noteToPlay);
+        // console.log(noteToPlay);
 
         if (newValueReceived == "111111111" || newValueReceived == "111111110") { // turn device ON
             isSoundEnabled = true;
@@ -230,6 +247,7 @@
             synth.releaseAll();
             droneSynth.releaseAll();
             IS_DRONE_PLAYING = false;
+            retrievedValue.innerHTML = '';
             return;
         }
 
@@ -244,29 +262,11 @@
             IS_DRONE_PLAYING = true;
         }
 
-        synth.releaseAll();
+        if (currentNote) {
+            synth.triggerRelease(currentNote);
+        }
         synth.triggerAttack(noteToPlay, now);
-    }
-
-    function writeOnCharacteristic(value) {
-        // if (bleServer && bleServer.connected) {
-        //     bleServiceFound.getCharacteristic(ledCharacteristic)
-        //     .then(characteristic => {
-        //         console.log("Found the LED characteristic: ", characteristic.uuid);
-        //         const data = new Uint8Array([value]);
-        //         return characteristic.writeValue(data);
-        //     })
-        //     .then(() => {
-        //         latestValueSent.innerHTML = value;
-        //         console.log("Value written to LEDcharacteristic:", value);
-        //     })
-        //     .catch(error => {
-        //         console.error("Error writing to the LED characteristic: ", error);
-        //     });
-        // } else {
-        //     console.error ("Bluetooth is not connected. Cannot write to characteristic.")
-        //     window.alert("Bluetooth is not connected. Cannot write to characteristic. \n Connect to BLE first!")
-        // }
+        currentNote = noteToPlay;
     }
 
     function disconnectDevice() {
