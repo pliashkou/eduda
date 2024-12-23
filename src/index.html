@@ -18,6 +18,9 @@
                 <p>
                     <button id="connectBleButton" class="connectButton"> Connect</button>
                     <button id="disconnectBleButton" class="disconnectButton"> Disconnect</button>
+                    <button onclick="if (bleServer) document.getElementById('update').click()">Update</button>
+                    <input id="update" type="file" name="file" style="visibility: hidden" accept=".bin" onchange="handleUpdate()"></input>
+                    <span id="progress"></span>
                 </p>
                 <p class="gray-label">eDuda state: <strong><span id="bleState"
                             style="color:#d13a30;">Disconnected</span></strong></p>
@@ -35,6 +38,12 @@
                 <input type="text" value="" id="stroi" style="width: 300px;" onblur="handleStroiChange()"/>
                 <p><a href="" onclick="setStroi(`F4,E4,D4,C4,B3,A3,G3,E3,E3`); return false;">F4,E4,D4,C4,B3,A3,G3,E3,E3</a></p>
                 <p><a href="" onclick="setStroi(`F#4,E4,D4,C#4,B3,A3,G3,E3,E3`); return false;">F#4,E4,D4,C#4,B3,A3,G3,E3,E3</a></p>
+            </div>
+
+            <div class="card">
+                <h2>Settings</h2>
+                <label>LEVEL</label>
+                <input type="text" value="" id="level" style="width: 500px;" onblur="onChangeLevel()"/>
             </div>
 
             <!-- <div class="card">
@@ -58,8 +67,11 @@
     const latestValueSent = document.getElementById("valueSent");
     const bleStateContainer = document.getElementById("bleState");
     const stroiEl = document.getElementById("stroi");
+    const levelEl = document.getElementById("level");
+    const progress = document.getElementById("progress");
 
     var NOTES = [];
+    var LEVEL = 10;
 
     var stroi = localStorage.getItem('stroi');
     if (!stroi) {
@@ -68,11 +80,14 @@
         setStroi(stroi);
     }
 
+    levelEl.value = LEVEL;
+
     //Define BLE Device Specs
     var deviceName = 'eDuda';
     var bleService = '19b10000-e8f2-537e-4f6c-d104768a1214';
     var sensorCharacteristic = '19b10001-e8f2-537e-4f6c-d104768a1214';
     var controlCharacteristic = '19b10002-e8f2-537e-4f6c-d104768a1214';
+    var otaCharacteristic = '19b10003-e8f2-537e-4f6c-d104768a1214';
 
     //Global Variables to Handle Bluetooth
     var bleServer;
@@ -113,6 +128,14 @@
         }
     });
 
+    function delay(ms) {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                resolve()
+            }, ms);
+        })
+    }
+
     // Disconnect Button
     disconnectButton.addEventListener("click", disconnectDevice);
 
@@ -130,6 +153,22 @@
         }
         console.log("Web Bluetooth API supported in this browser.");
         return true;
+    }
+
+    async function handleUpdate() {
+        const data = await this.event.target.files[0].arrayBuffer();
+        const chunkSize = 512;
+        const ota = await bleServiceFound.getCharacteristic(otaCharacteristic);
+        for(let i = 0; i < (data.byteLength / chunkSize) + 1; i++) {
+            progress.textContent = 'Uploaded ' + Math.ceil(100 * i * chunkSize/ data.byteLength ) + '% (' + (i * chunkSize) + '/' + data.byteLength + ')';
+            const chunk = data.slice(i * chunkSize, (i+1) * chunkSize);
+            await ota.writeValue(chunk);
+        }
+
+        progress.textContent = "Updating. Don't turn off the device for 10 seconds! The page will reload automatically!";
+
+        await delay(10000);
+        window.location.reload();
     }
 
     function handleStroiChange() {
@@ -165,6 +204,7 @@
             })
             .then((service) => {
                 bleServiceFound = service;
+                writeControlCharacteristic(LEVEL);
                 console.log("Service discovered:", service.uuid);
                 return service.getCharacteristic(sensorCharacteristic);
             })
@@ -184,7 +224,7 @@
     }
 
     function onDisconnected(event) {
-        writeControlCharacteristic(0);
+        // writeControlCharacteristic(0);
         console.log("Device Disconnected:", event.target.device.name);
         bleStateContainer.innerHTML = "Device disconnected";
         bleStateContainer.style.color = "#d13a30";
@@ -192,12 +232,20 @@
         connectToDevice();
     }
 
-    function writeControlCharacteristic(value){
+    function onChangeLevel() {
+        // writeControlCharacteristic('level', this.event.target.value);
+        // levelEl.value = this.event.target.value;
+        // LEVEL = this.event.target.value;
+    }
+
+    function writeControlCharacteristic(key, value){
+        return;
         if (bleServer && bleServer.connected) {
 
             bleServiceFound.getCharacteristic(controlCharacteristic)
             .then(characteristic => {
-                const data = Uint8Array.from(Array.from(value).map(letter => letter.charCodeAt(0)));
+                console.log('SETTINGS UPDATE ', JSON.stringify({[key]: value}));
+                const data = Uint8Array.from(Array.from(JSON.stringify({[key]: value})).map(letter => letter.charCodeAt(0)));
                 return characteristic.writeValue(data);
             })
             .then(() => {
@@ -266,7 +314,7 @@
         synth.triggerAttack(noteToPlay, now);
         currentNote = noteToPlay;
 
-        writeControlCharacteristic(newValueReceived);
+        // writeControlCharacteristic(newValueReceived);
 
     }
 
